@@ -39,8 +39,8 @@ func (g *Game) Init() {
 	g.ImportAssets()
 	g.Player = PlayerCreate(g.Assets.player, r.Vector2{X: 1920/2 - float32(g.Assets.player.Width)/2, Y: (1080 / 3) * 2}, g.ShootLaser)
 	g.Starfield = g.StarsGenerate(40)
-	g.MeteorTimer = *TimerCreate(5, true, true, g.CreateMeteor)
-	// r.PlayMusicStream(g.audio.music)
+	g.MeteorTimer = *TimerCreate(0.4, true, true, g.CreateMeteor)
+	r.PlayMusicStream(g.audio.music)
 
 }
 func (g *Game) Update() {
@@ -48,13 +48,20 @@ func (g *Game) Update() {
 	g.Player.Update(dt)
 	g.MeteorTimer.Update()
 	g.DiscardSprites()
-	for _, laser := range g.Lasers {
+	for i := range g.Lasers {
+		laser := &g.Lasers[i]
 		laser.Update(dt)
 	}
-	for _, meteor := range g.Meteors {
+	for i := range g.Meteors {
+		meteor := &g.Meteors[i]
 		meteor.Update(dt)
 	}
-	// r.UpdateMusicStream(g.audio.music)
+	for i := range g.Explosions {
+		explosion := &g.Explosions[i]
+		explosion.Update(dt)
+	}
+	g.CheckCollisions()
+	r.UpdateMusicStream(g.audio.music)
 }
 func (g *Game) Draw() {
 	r.BeginDrawing()
@@ -63,6 +70,7 @@ func (g *Game) Draw() {
 	g.DrawScore()
 	g.MeteorsDraw()
 	g.LasersDraw()
+	g.ExplosionsDraw()
 	g.Player.Draw()
 	r.EndDrawing()
 }
@@ -70,7 +78,7 @@ func (g *Game) Run() {
 	g.Init()
 	defer r.CloseWindow()
 	defer r.CloseAudioDevice()
-	// defer r.UnloadMusicStream(g.audio.music)
+	defer r.UnloadMusicStream(g.audio.music)
 
 	for !r.WindowShouldClose() {
 
@@ -89,37 +97,47 @@ func (g *Game) ImportAssets() {
 		laser:     r.LoadSound(filepath.Join("assets", "audio", "laser.wav")),
 		explosion: r.LoadSound(filepath.Join("assets", "audio", "explosion.wav")),
 	}
+	for i := 1; i < 28; i++ {
+		asset := r.LoadTexture(filepath.Join("assets", "images", "explosion", fmt.Sprintf("%v.png", i)))
+		g.Assets.explosion = append(g.Assets.explosion, asset)
+	}
 }
 func (g *Game) DiscardSprites() {
 	var lasers []Laser
-	for _, laser := range g.Lasers {
+	for l := range g.Lasers {
+		laser := &g.Lasers[l]
 		if !laser.Discard {
-			lasers = append(lasers, laser)
+			lasers = append(lasers, *laser)
 		}
 	}
 	g.Lasers = lasers
 
 	var meteors []Meteor
-	for _, meteor := range g.Meteors {
+	for m := range g.Meteors {
+		meteor := &g.Meteors[m]
 		if !meteor.Discard {
-			meteors = append(meteors, meteor)
+			meteors = append(meteors, *meteor)
 		}
 	}
 	g.Meteors = meteors
 
 	var explosions []ExplosionAnimation
-	for _, explosion := range g.Explosions {
+	for e := range g.Explosions {
+		explosion := &g.Explosions[e]
 		if !explosion.Discard {
-			explosions = append(explosions, explosion)
+			explosions = append(explosions, *explosion)
 		}
 	}
 	g.Explosions = explosions
 }
 func (g *Game) CheckCollisions() {
 	// lasers and meteors
-	for _, laser := range g.Lasers {
-		for _, meteor := range g.Meteors {
+	for l := range g.Lasers {
+		laser := &g.Lasers[l]
+		for m := range g.Meteors {
+			meteor := &g.Meteors[m]
 			if r.CheckCollisionCircles(meteor.GetCenter(), meteor.CollisionRadius, laser.GetCenter(), laser.CollisionRadius) {
+				fmt.Println("Collision")
 				laser.Discard = true
 				meteor.Discard = true
 				pos := r.Vector2{X: laser.Pos.X - laser.Size.X/2, Y: laser.Pos.Y}
@@ -131,7 +149,8 @@ func (g *Game) CheckCollisions() {
 	}
 
 	// player and meteors
-	for _, meteor := range g.Meteors {
+	for m := range g.Meteors {
+		meteor := &g.Meteors[m]
 		if r.CheckCollisionCircles(g.Player.GetCenter(), g.Player.CollisionRadius, meteor.GetCenter(), meteor.CollisionRadius) {
 			r.CloseWindow()
 		}
@@ -168,6 +187,11 @@ func (g *Game) LasersDraw() {
 		laser.Draw()
 	}
 }
+func (g *Game) ExplosionsDraw() {
+	for _, explosion := range g.Explosions {
+		explosion.Draw()
+	}
+}
 func (g *Game) MeteorsDraw() {
 	for _, meteor := range g.Meteors {
 		meteor.Draw()
@@ -180,7 +204,5 @@ func (g *Game) ShootLaser(pos r.Vector2) {
 }
 func (g *Game) CreateMeteor() {
 	meteor := MeteorCreate(g.Assets.meteor)
-	// fmt.Printf("meteor props\ntexture %v\ndirection %v\nhitbox %v\npos %v\nspeed %v\nscale %v\nsprite %v\n", meteor.Texture, meteor.Direction, meteor.Hitbox, meteor.Pos, meteor.Speed, meteor.Scale, meteor.Sprite)
 	g.Meteors = append(g.Meteors, meteor)
-	// fmt.Printf("create meteor \n%v\n", g.Meteors)
 }

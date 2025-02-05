@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 
@@ -44,7 +43,6 @@ func (s *Sprite) Move(dt float32) {
 func (s *Sprite) Update(dt float32) {
 	s.Move(dt)
 	s.CheckDiscard()
-	// fmt.Printf("sprite %v\n", s.Pos)
 }
 func (s *Sprite) GetCenter() r.Vector2 {
 	return r.Vector2{
@@ -108,7 +106,7 @@ func MeteorCreate(texture r.Texture2D) Meteor {
 		Hitbox: r.Rectangle{X: 0, Y: 0, Width: float32(texture.Width), Height: float32(texture.Height)},
 		Sprite: Sprite{
 			Texture:         texture,
-			Pos:             r.Vector2{X: float32(rand.Intn(2000) - 40), Y: float32(rand.Intn(600) - 150)},
+			Pos:             r.Vector2{X: float32(rand.Intn(2000) - 40), Y: float32(rand.Intn(100) - 150)},
 			Direction:       r.Vector2{X: float32(math.Max(math.Min(0.5, (rand.Float64()*2)-1), -0.5)), Y: 1},
 			Size:            r.Vector2{X: float32(texture.Width), Y: float32(texture.Height)},
 			Speed:           float32(rand.Intn(101) + 300),
@@ -121,9 +119,7 @@ func MeteorCreate(texture r.Texture2D) Meteor {
 }
 
 func (p *Meteor) Update(dt float32) {
-	fmt.Printf("meteor before\np %v\n", p.Sprite)
 	p.Sprite.Update(dt)
-	fmt.Printf("meteor after\np %v\n", p.Sprite)
 	p.Rotation += p.Speed * dt / 2 * p.Direction.X
 }
 func (p *Meteor) GetCenter() r.Vector2 {
@@ -139,7 +135,7 @@ type ExplosionAnimation struct {
 	Pos      r.Vector2
 	Size     r.Vector2
 	Discard  bool
-	Index    int
+	Index    float32
 }
 
 func ExplosionAnimationCreate(textures []r.Texture2D, pos r.Vector2) ExplosionAnimation {
@@ -153,12 +149,12 @@ func ExplosionAnimationCreate(textures []r.Texture2D, pos r.Vector2) ExplosionAn
 	return animation
 }
 func (a *ExplosionAnimation) Update(dt float32) {
-	if a.Index < len(a.Textures)-1 {
-		a.Index += int(20 * dt)
+	if int(a.Index) < len(a.Textures)-1 {
+		a.Index += 20 * dt
 	} else {
 		a.Discard = true
 	}
 }
 func (a ExplosionAnimation) Draw() {
-	r.DrawTextureV(a.Textures[a.Index], a.Pos, r.White)
+	r.DrawTextureV(a.Textures[int(a.Index)], a.Pos, r.White)
 }
